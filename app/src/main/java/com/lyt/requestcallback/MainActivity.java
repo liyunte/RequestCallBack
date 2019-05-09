@@ -5,32 +5,38 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.lyt.requestcallback.mylibrary.RequestCallBackManager;
-import com.lyt.requestcallback.mylibrary.annotation.RequestCallBack;
-import com.lyt.requestcallback.mylibrary.type.Response;
+import com.lyt.requestcallback.mylibrary.annotation.RequestFailure;
+import com.lyt.requestcallback.mylibrary.annotation.RequestSuccess;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String request = "login";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         RequestCallBackManager.getInstance().register(this);
+        List<String> list = new ArrayList<String>();
+        list.add("恭喜你成功了");
+        RequestCallBackManager.getInstance().postSuccess(request,list);
+    }
 
 
-        RequestCallBackManager.getInstance().post(new Response("login",true,"---------------"));
-        RequestCallBackManager.getInstance().post(new Response("login",false,"---------------"));
+    @RequestSuccess(request)
+    public void success(List<String> data){
+        Log.e("liyunte","收到了Success信息="+data.get(0));
     }
-    @RequestCallBack
-    public void onRec1(Response response){
-        Log.e("liyunte","onRec1"+response.toString());
+    @RequestFailure(request)
+    public void failure(String failure){
+        Log.e("liyunte","收到了failure信息="+failure);
     }
-    @RequestCallBack(requestType = "login")
-    public void onRec2(Response response){
-        Log.e("liyunte","onRec2"+response.toString());
-    }
-    @RequestCallBack(requestType = "register")
-    public void onRec3(Response response){
-        Log.e("liyunte","onRec3"+response.toString());
+
+    @RequestFailure("222")
+    public void dd(String failure){
+        Log.e("liyunte","收到了dd  failure信息="+failure);
     }
     @Override
     protected void onDestroy() {

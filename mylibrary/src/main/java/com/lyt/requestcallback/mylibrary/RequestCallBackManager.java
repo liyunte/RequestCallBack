@@ -1,10 +1,9 @@
 package com.lyt.requestcallback.mylibrary;
 
-import android.support.annotation.NonNull;
 
-import com.lyt.requestcallback.mylibrary.annotation.RequestCallBack;
+import com.lyt.requestcallback.mylibrary.annotation.RequestFailure;
+import com.lyt.requestcallback.mylibrary.annotation.RequestSuccess;
 import com.lyt.requestcallback.mylibrary.bean.MethodBean;
-import com.lyt.requestcallback.mylibrary.type.Response;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -26,10 +25,11 @@ public class RequestCallBackManager {
     }
 
     private static volatile RequestCallBackManager instance;
-    public static RequestCallBackManager getInstance(){
-        if (instance==null){
-            synchronized (RequestCallBackManager.class){
-                if (instance==null){
+
+    public static RequestCallBackManager getInstance() {
+        if (instance == null) {
+            synchronized (RequestCallBackManager.class) {
+                if (instance == null) {
                     instance = new RequestCallBackManager();
                 }
             }
@@ -37,10 +37,10 @@ public class RequestCallBackManager {
         return instance;
     }
 
-    public void register(@NonNull Object register){
-       if (register==null){
-           throw new NullPointerException("注册的对象不能为空");
-       }
+    public void register(Object register) {
+        if (register == null) {
+            throw new NullPointerException("注册的对象不能为空");
+        }
         List<MethodBean> methodList = networkList.get(register);
         if (methodList == null) {
             methodList = findAnnotationMethod(register);
@@ -48,16 +48,18 @@ public class RequestCallBackManager {
         }
 
     }
-    public void unRegister(Object register){
-        if (register==null){
+
+    public void unRegister(Object register) {
+        if (register == null) {
             throw new NullPointerException("注册的对象不能为空");
         }
         if (!networkList.isEmpty()) {
             networkList.remove(register);
         }
     }
-    public void unRegisterAll(){
-        if (!networkList.isEmpty()){
+
+    public void unRegisterAll() {
+        if (!networkList.isEmpty()) {
             networkList.clear();
         }
     }
@@ -67,26 +69,43 @@ public class RequestCallBackManager {
      *
      * @param response
      */
-    public void post(Response response) {
-        if (response!=null){
+    public void postSuccess(String requestType, List response) {
+        if (response != null) {
             Set<Object> set = networkList.keySet();
             for (Object getter : set) {
                 List<MethodBean> methodList = networkList.get(getter);
                 if (methodList != null) {
                     for (MethodBean method : methodList) {
-                        if (method.getType().isAssignableFrom(response.getClass())) {
-                          if (method.getRequestType().isEmpty()){
-                              invoke(method,getter,response);
-                          }else if (method.getRequestType().equalsIgnoreCase(response.getRequestType())){
-                              invoke(method,getter,response);
-                          }
+                        if (method.getValue().equalsIgnoreCase(requestType)) {
+                            if (method.getType().isAssignableFrom(response.getClass())) {
+                                invoke(method, getter, response);
+                            }
                         }
                     }
                 }
             }
         }
-
     }
+
+    public void postFailure(String requestType, String response) {
+        if (response != null) {
+            Set<Object> set = networkList.keySet();
+            for (Object getter : set) {
+                List<MethodBean> methodList = networkList.get(getter);
+                if (methodList != null) {
+                    for (MethodBean method : methodList) {
+                        if (method.getValue().equalsIgnoreCase(requestType)) {
+                            if (method.getType().isAssignableFrom(response.getClass())) {
+                                invoke(method, getter, response);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
     /**
      * 查找register中所有使用@Network注解的方法，封装成MethodManager并保存到集合中
      *
@@ -98,24 +117,39 @@ public class RequestCallBackManager {
         Class<?> clazz = register.getClass();
         Method[] methods = clazz.getMethods();
         for (Method method : methods) {
-            RequestCallBack callBack = method.getAnnotation(RequestCallBack.class);
-            if (callBack == null) {
-                continue;
-            }
             //方法注解的校验
-            Type returnType = method.getGenericReturnType();
-            if (!"void".equalsIgnoreCase(returnType.toString())) {
-                throw new RuntimeException("方法返回不是void");
+            RequestSuccess callBack = method.getAnnotation(RequestSuccess.class);
+            if (callBack != null) {
+                Type returnType = method.getGenericReturnType();
+                if (!"void".equalsIgnoreCase(returnType.toString())) {
+                    throw new RuntimeException("方法返回不是void");
+                }
+                Class<?>[] parmeterTypes = method.getParameterTypes();
+                if (parmeterTypes.length != 1) {
+                    throw new RuntimeException(method.getName() + "方法有且只有一个");
+                }
+                if (!parmeterTypes[0].isAssignableFrom(List.class)) {
+                    throw new RuntimeException(method.getName() + "方法参数类型只能为List");
+                }
+                MethodBean methodManager = new MethodBean(parmeterTypes[0], callBack.value(), method);
+                methodList.add(methodManager);
             }
-
-            Class<?>[] parmeterTypes = method.getParameterTypes();
-            //方法返回类型检查
-            if (parmeterTypes.length != 1) {
-                throw new RuntimeException(method.getName() + "方法有且只有一个");
+            RequestFailure failureCallback = method.getAnnotation(RequestFailure.class);
+            if (failureCallback != null) {
+                Type returnType = method.getGenericReturnType();
+                if (!"void".equalsIgnoreCase(returnType.toString())) {
+                    throw new RuntimeException("方法返回不是void");
+                }
+                Class<?>[] parmeterTypes = method.getParameterTypes();
+                if (parmeterTypes.length != 1) {
+                    throw new RuntimeException(method.getName() + "方法有且只有一个");
+                }
+                if (!parmeterTypes[0].isAssignableFrom(String.class)) {
+                    throw new RuntimeException(method.getName() + "方法参数类型只能为String");
+                }
+                MethodBean methodManager = new MethodBean(parmeterTypes[0], failureCallback.value(), method);
+                methodList.add(methodManager);
             }
-            MethodBean methodManager = new MethodBean(parmeterTypes[0], callBack.requestType(), method);
-            methodList.add(methodManager);
-
         }
         return methodList;
     }
@@ -127,7 +161,7 @@ public class RequestCallBackManager {
      * @param getter
      * @param response
      */
-    private void invoke(MethodBean method, Object getter, Response response) {
+    private void invoke(MethodBean method, Object getter, Object response) {
         try {
             method.getMethod().invoke(getter, response);
         } catch (Exception e) {

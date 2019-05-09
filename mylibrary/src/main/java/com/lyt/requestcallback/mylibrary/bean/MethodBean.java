@@ -9,9 +9,10 @@ public class MethodBean {
     private Class<?> type;
 
     /**
-     * 注解参数
+     * 注解参数 请求标记
      */
-    private String requestType;
+    private String value;
+
 
     /**
      * 方法
@@ -19,10 +20,12 @@ public class MethodBean {
     private Method method;
 
 
+    public MethodBean() {
+    }
 
-    public MethodBean(Class<?> type, String requestType, Method method) {
+    public MethodBean(Class<?> type, String value, Method method) {
         this.type = type;
-        this.requestType = requestType;
+        this.value = value;
         this.method = method;
     }
 
@@ -34,12 +37,12 @@ public class MethodBean {
         this.type = type;
     }
 
-    public String getRequestType() {
-        return requestType;
+    public String getValue() {
+        return value;
     }
 
-    public void setRequestType(String requestType) {
-        this.requestType = requestType;
+    public void setValue(String value) {
+        this.value = value;
     }
 
     public Method getMethod() {

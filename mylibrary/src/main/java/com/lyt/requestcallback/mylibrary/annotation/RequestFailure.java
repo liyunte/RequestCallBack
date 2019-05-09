@@ -8,6 +8,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RequestCallBack {
-   String requestType() default "";
+public @interface RequestFailure {
+    /*请求tag*/
+    String value();
 }
